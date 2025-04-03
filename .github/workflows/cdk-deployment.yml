@@ -116,10 +116,10 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Network check stage passed!"
-
   deploy-service:
-    needs: network-check
+    needs: 
+      - detect-networking-changes
+      - network-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
