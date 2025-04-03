@@ -48,13 +48,19 @@ jobs:
           
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
             echo "No changes detected in NetworkingStack"
-            echo "requires_approval=false" >> $GITHUB_ENV
-            echo "requires_approval=false" >> $GITHUB_OUTPUT
+            echo "requires_approval=false" >> "$GITHUB_OUTPUT"
           else
             echo "Changes detected in NetworkingStack"
-            echo "requires_approval=true" >> $GITHUB_ENV
-            echo "requires_approval=true" >> $GITHUB_OUTPUT
+            echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
+
+  # NEW JOB: DEBUG GITHUB OUTPUT
+  debug-github-output:
+    needs: detect-networking-changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug requires_approval Output
+        run: echo "requires_approval from detect-networking-changes ${{ needs.detect-networking-changes.outputs.requires_approval }}"
 
   request-approval:
     needs: detect-networking-changes
@@ -83,11 +89,9 @@ jobs:
           echo "Approval comments: $COMMENTS"
 
           if echo "$COMMENTS" | grep -iq "approved"; then
-            echo "deployment_approved=true" >> $GITHUB_ENV
-            echo "deployment_approved=true" >> $GITHUB_OUTPUT
+            echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
           else
-            echo "deployment_approved=false" >> $GITHUB_ENV
-            echo "deployment_approved=false" >> $GITHUB_OUTPUT
+            echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
