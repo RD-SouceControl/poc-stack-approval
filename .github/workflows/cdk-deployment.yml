@@ -46,8 +46,8 @@ jobs:
         run: |
           DIFF_OUTPUT=$(cdk diff NetworkStack || true)
           echo "$DIFF_OUTPUT"
-          
-          if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
+
+          if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" =~ "There were no differences" ]]; then
             echo "No changes detected in NetworkingStack"
             echo "requires_approval=false" >> $GITHUB_ENV
             echo "deployment_approved=true" >> $GITHUB_ENV
@@ -59,6 +59,8 @@ jobs:
             echo "deployment_approved=false" >> $GITHUB_ENV
             echo "requires_approval=true" >> $GITHUB_OUTPUT
             echo "deployment_approved=false" >> $GITHUB_OUTPUT
+          fi
+
 
   request-approval:
     needs: detect-networking-changes
