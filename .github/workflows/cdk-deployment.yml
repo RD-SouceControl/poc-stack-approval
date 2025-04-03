@@ -63,7 +63,7 @@ jobs:
     permissions:
       issues: write
     outputs:
-      approved: ${{ steps.approval.outputs.approval_status }}
+      deployment_approved: ${{ steps.set_approval.outputs.deployment_approved }}
     steps:
       - name: Manual Workflow Approval
         id: approval
@@ -75,19 +75,22 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Set Approval Flag
+      - name: Set Approval Output
+        id: set_approval
         run: |
           if [[ "${{ steps.approval.outputs.approval_status }}" == "approved" ]]; then
             echo "deployment_approved=true" >> $GITHUB_ENV
+            echo "deployment_approved=true" >> $GITHUB_OUTPUT
           else
             echo "deployment_approved=false" >> $GITHUB_ENV
+            echo "deployment_approved=false" >> $GITHUB_OUTPUT
           fi
 
   deploy-service:
     needs:
       - detect-networking-changes
       - request-approval
-    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || env.deployment_approved == 'true'
+    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || needs.request-approval.outputs.deployment_approved == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
