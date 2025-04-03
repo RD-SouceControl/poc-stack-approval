@@ -1,12 +1,12 @@
-name: CDK Deployment Workflow
+name: Networking Check & Approval
 
 on:
   push:
     branches:
-      - dev
+      - master
   pull_request:
     branches:
-      - dev
+      - master
 
 permissions:
   id-token: write
@@ -48,12 +48,10 @@ jobs:
           
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
             echo "No changes detected in NetworkingStack"
-            echo "requires_approval=false" >> $GITHUB_ENV
-            echo "requires_approval=false" >> $GITHUB_OUTPUT
+            echo "requires_approval=false" >> "$GITHUB_OUTPUT"
           else
             echo "Changes detected in NetworkingStack"
-            echo "requires_approval=true" >> $GITHUB_ENV
-            echo "requires_approval=true" >> $GITHUB_OUTPUT
+            echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
   request-approval:
@@ -75,41 +73,42 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Debug Approval Status
-        run: |
-          echo "Approval status: ${{ steps.approval.outputs.approval_status }}"
-
-      - name: Set Approval Output
+      - name: Check Approval Status
         id: set_approval
         run: |
-          if [[ "${{ steps.approval.outputs.approval_status }}" == "approved" ]]; then
-            echo "deployment_approved=true" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
+          echo "Checking approval issue comments..."
+          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' "${{ github.event.number }}")
+          echo "Approval comments: $COMMENTS"
+
+          if echo "$COMMENTS" | grep -iq "approved"; then
+            echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
           else
-            echo "deployment_approved=false" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
+            echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-  deploy-service:
-    needs:
+  save-network-status:
+    needs: 
       - detect-networking-changes
       - request-approval
-    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || needs.request-approval.outputs.deployment_approved == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
+      - name: Save network check status
+        run: |
+          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
+          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
+          
+          if [[ "$requires_approval" == "false" || "$deployment_approved" == "true" ]]; then
+            echo "✅ Approval granted OR not required"
+            echo "PASS" > network-status.txt
+          else
+            echo "❌ Approval denied"
+            echo "FAIL" > network-status.txt
+          fi
+          
+      - name: Upload status artifact
+        uses: actions/upload-artifact@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
-      
-      - name: Install dependencies
-        run: npm install
-      
-      - name: Deploy ServiceStack
-        run: cdk deploy ServiceStack --require-approval never
+          name: network-status
+          path: network-status.txt

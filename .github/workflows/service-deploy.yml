@@ -1,0 +1,52 @@
+name: Service Deployment
+
+on:
+  workflow_run:
+    workflows: ["Networking Check & Approval"]
+    types:
+      - completed
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  check-network-status:
+    runs-on: ubuntu-latest
+    outputs:
+      network_status: ${{ steps.read-status.outputs.network_status }}
+    steps:
+      - name: Download network status artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: network-status
+
+      - name: Read network status
+        id: read-status
+        run: |
+          STATUS=$(cat network-status.txt)
+          echo "Network status: $STATUS"
+          echo "network_status=$STATUS" >> "$GITHUB_OUTPUT"
+
+  deploy-service:
+    needs: check-network-status
+    if: needs.check-network-status.outputs.network_status == 'PASS'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Deploy ServiceStack
+        run: cdk deploy ServiceStack --require-approval never
