@@ -95,7 +95,6 @@ jobs:
   deploy-service:
     needs:
       - detect-networking-changes
-      - request-approval
     if: needs.detect-networking-changes.outputs.deployment_approved == 'true' || needs.request-approval.outputs.deployment_approved == 'true'
     runs-on: ubuntu-latest
     steps:
