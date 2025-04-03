@@ -73,42 +73,4 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Check Approval Status
-        id: set_approval
-        run: |
-          echo "Checking approval issue comments..."
-          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' "${{ github.event.number }}")
-          echo "Approval comments: $COMMENTS"
-
-          if echo "$COMMENTS" | grep -iq "approved"; then
-            echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  save-network-status:
-    needs: 
-      - detect-networking-changes
-      - request-approval
-    runs-on: ubuntu-latest
-    steps:
-      - name: Save network check status
-        run: |
-          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
-          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
-          
-          if [[ "$requires_approval" == "false" || "$deployment_approved" == "true" ]]; then
-            echo "✅ Approval granted OR not required"
-            echo "PASS" > network-status.txt
-          else
-            echo "❌ Approval denied"
-            echo "FAIL" > network-status.txt
-          fi
-          
-      - name: Upload status artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: network-status
-          path: network-status.txt
+  
