@@ -1,0 +1,96 @@
+name: CDK Deployment Workflow
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  detect-networking-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      requires_approval: ${{ steps.detect.outputs.requires_approval }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: cdk diff networking
+        id: detect
+        run: |
+          DIFF_OUTPUT=$(cdk diff NetworkStack || true)
+          echo "$DIFF_OUTPUT"
+          
+          if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
+            echo "No changes detected in NetworkingStack"
+            echo "requires_approval=false" >> $GITHUB_ENV
+            echo "requires_approval=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in NetworkingStack"
+            echo "requires_approval=true" >> $GITHUB_ENV
+            echo "requires_approval=true" >> $GITHUB_OUTPUT
+          fi
+
+  request-approval:
+    needs: detect-networking-changes
+    if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manual Workflow Approval
+        uses: trstringer/manual-approval@v1.9.1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: Ram1814
+          minimum-approvals: 1
+          issue-title: "Approve Networking Changes"
+          issue-body: "Please approve or deny the deployment of networking changes."
+          fail-on-denial: true
+
+  deploy-service:
+    needs: 
+      - detect-networking-changes
+    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || needs.request-approval.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Deploy ServiceStack
+        run: cdk deploy ServiceStack --require-approval never
