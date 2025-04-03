@@ -1,4 +1,4 @@
-name: CDK Deployment Pipeline
+name: CDK Deployment Workflow
 
 on:
   push:
