@@ -10,7 +10,7 @@ export class NetworkStack extends cdk.Stack {
 
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 2,
-      natGateways: 1,
+      natGateways: 0,
     });
 
     new cdk.CfnOutput(this, 'VpcId', {

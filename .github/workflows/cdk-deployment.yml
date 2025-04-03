@@ -13,7 +13,6 @@ permissions:
   contents: write
 
 jobs:
-  # 🔹 STAGE 1: NETWORK CHECK & APPROVAL 🔹
   detect-networking-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -55,71 +54,70 @@ jobs:
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
-  request-approval:
-    needs: detect-networking-changes
-    if: needs.detect-networking-changes.outputs.requires_approval == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    outputs:
-      deployment_approved: ${{ steps.set_approval.outputs.deployment_approved }}
-    steps:
-      - name: Manual Workflow Approval
-        id: approval
-        uses: trstringer/manual-approval@v1.9.1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: Ram1814
-          minimum-approvals: 1
-          issue-title: "Approve Networking Changes"
-          issue-body: "Please approve or deny the deployment of networking changes."
+  # request-approval:
+  #   needs: detect-networking-changes
+  #   if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     issues: write
+  #   outputs:
+  #     deployment_approved: ${{ steps.set_approval.outputs.deployment_approved }}
+  #   steps:
+  #     - name: Manual Workflow Approval
+  #       id: approval
+  #       uses: trstringer/manual-approval@v1.9.1
+  #       with:
+  #         secret: ${{ secrets.GITHUB_TOKEN }}
+  #         approvers: Ram1814
+  #         minimum-approvals: 1
+  #         issue-title: "Approve Networking Changes"
+  #         issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Check Approval Status
-        id: set_approval
-        run: |
-          echo "Checking approval issue comments..."
-          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' "${{ github.event.number }}")
-          echo "Approval comments: $COMMENTS"
+  #     - name: Check Approval Status
+  #       id: set_approval
+  #       run: |
+  #         echo "Checking approval issue comments..."
+  #         COMMENTS=$(gh issue view --json comments --jq '.comments[].body' "${{ github.event.number }}")
+  #         echo "Approval comments: $COMMENTS"
 
-          if echo "$COMMENTS" | grep -iq "approved"; then
-            echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         if echo "$COMMENTS" | grep -iq "approved"; then
+  #           echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
+  #         else
+  #           echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
+  #         fi
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  network-check:
-    needs: 
-      - detect-networking-changes
-      - request-approval
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Determine network check result
-        run: |
-          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
-          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
+  # network-check:
+  #   needs: 
+  #     - detect-networking-changes
+  #     - request-approval
+  #   if: always()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Determine network check result
+  #       run: |
+  #         requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
+  #         deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
           
-          echo "requires_approval: $requires_approval"
-          echo "deployment_approved: $deployment_approved"
+  #         echo "requires_approval: $requires_approval"
+  #         echo "deployment_approved: $deployment_approved"
 
-          # If request-approval was skipped, manually set deployment_approved to true
-          if [[ "$requires_approval" == "false" ]]; then
-            echo "✅ No approval needed, passing network check."
-            exit 0
-          fi
+  #         # If request-approval was skipped, manually set deployment_approved to true
+  #         if [[ "$requires_approval" == "false" ]]; then
+  #           echo "✅ No approval needed, passing network check."
+  #           exit 0
+  #         fi
 
-          # If approval was required but denied, fail the job
-          if [[ "$requires_approval" == "true" && "$deployment_approved" != "true" ]]; then
-            echo "❌ Approval denied or pending! Failing stage."
-            exit 1
-          fi
+  #         # If approval was required but denied, fail the job
+  #         if [[ "$requires_approval" == "true" && "$deployment_approved" != "true" ]]; then
+  #           echo "❌ Approval denied or pending! Failing stage."
+  #           exit 1
+  #         fi
 
   deploy-service:
     needs: 
       - detect-networking-changes
-      - network-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
