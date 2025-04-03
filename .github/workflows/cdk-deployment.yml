@@ -13,6 +13,7 @@ permissions:
   contents: write
 
 jobs:
+  # 🔹 STAGE 1: NETWORK CHECK & APPROVAL 🔹
   detect-networking-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -54,14 +55,6 @@ jobs:
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # NEW JOB: DEBUG GITHUB OUTPUT
-  debug-github-output:
-    needs: detect-networking-changes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Debug requires_approval Output
-        run: echo "requires_approval from detect-networking-changes ${{ needs.detect-networking-changes.outputs.requires_approval }}"
-
   request-approval:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
@@ -96,11 +89,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-service:
-    needs:
+  # ✅ STAGE 1 CHECKPOINT: PASS OR FAIL?
+  network-check:
+    needs: 
       - detect-networking-changes
       - request-approval
-    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || needs.request-approval.outputs.deployment_approved == 'true'
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine network check result
+        run: |
+          if [[ "${{ needs.detect-networking-changes.outputs.requires_approval }}" == "true" && "${{ needs.request-approval.outputs.deployment_approved }}" != "true" ]]; then
+            echo "❌ Approval denied or pending! Failing stage."
+            exit 1
+          fi
+          echo "✅ Network check stage passed!"
+
+  # 🔹 STAGE 2: SERVICE DEPLOYMENT 🔹
+  deploy-service:
+    needs: network-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
