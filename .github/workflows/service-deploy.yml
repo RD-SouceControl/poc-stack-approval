@@ -5,6 +5,10 @@ on:
     workflows: ["Networking Check & Approval"]
     types:
       - completed
+    branches:
+      - master
+    conditions:
+      - success()
 
 permissions:
   id-token: write
