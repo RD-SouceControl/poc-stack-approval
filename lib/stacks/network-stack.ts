@@ -9,8 +9,8 @@ export class NetworkStack extends cdk.Stack {
     super(scope, id, props);
 
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: 3,
-      natGateways: 0,
+      maxAzs: 2,
+      natGateways: 1,
     });
 
     new cdk.CfnOutput(this, 'VpcId', {
