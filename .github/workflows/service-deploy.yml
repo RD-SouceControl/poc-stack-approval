@@ -12,8 +12,6 @@ permissions:
 
 jobs:
   deploy-service:
-    needs: check-network-status
-    if: needs.check-network-status.outputs.network_status == 'PASS'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
