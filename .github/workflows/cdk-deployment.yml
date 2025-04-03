@@ -108,6 +108,7 @@ jobs:
   # 🔹 STAGE 2: SERVICE DEPLOYMENT 🔹
   deploy-service:
     needs: network-check
+    if: success()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
