@@ -84,7 +84,7 @@ jobs:
             echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
           fi
 
-  network-check:
+  status-check:
     needs: 
       - detect-networking-changes
       - request-approval
