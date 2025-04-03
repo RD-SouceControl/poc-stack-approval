@@ -81,15 +81,16 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Set approval output
-        id: set_approval
+      - name: Set Approval
         run: |
-          if [[ "${{ steps.manual_approval.outputs.approval }}" == "approved" ]]; then
+          APPROVAL_STATUS="${{ steps.approval.outputs.approval_status }}"
+          
+          if [[ "$APPROVAL_STATUS" == "approved" ]]; then
             echo "deployment_approved=true" >> $GITHUB_ENV
-            echo "deployment_approved=true" >> $GITHUB_OUTPUT
           else
             echo "deployment_approved=false" >> $GITHUB_ENV
-            echo "deployment_approved=false" >> $GITHUB_OUTPUT
+          fi
+
 
   deploy-service:
     needs:
