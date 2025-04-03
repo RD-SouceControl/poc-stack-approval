@@ -60,6 +60,8 @@ jobs:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write  # Grant permission to create approval issue
     steps:
       - name: Manual Workflow Approval
         uses: trstringer/manual-approval@v1.9.1
@@ -69,7 +71,7 @@ jobs:
           minimum-approvals: 1
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
-          fail-on-denial: true
+
 
   deploy-service:
     needs: 
