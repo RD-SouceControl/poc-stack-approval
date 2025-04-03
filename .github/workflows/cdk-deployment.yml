@@ -89,7 +89,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ✅ STAGE 1 CHECKPOINT: PASS OR FAIL?
   network-check:
     needs: 
       - detect-networking-changes
@@ -119,11 +118,8 @@ jobs:
 
           echo "✅ Network check stage passed!"
 
-
-  # 🔹 STAGE 2: SERVICE DEPLOYMENT 🔹
   deploy-service:
     needs: network-check
-    if: needs.network-check.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
