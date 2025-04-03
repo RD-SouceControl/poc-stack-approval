@@ -75,22 +75,22 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Check Approval Issue
-        id: check_approval
+      - name: Check Approval Status
+        id: set_approval
         run: |
           echo "Checking approval issue comments..."
-          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' ${{ github.event.number }})
+          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' "${{ github.event.number }}")
           echo "Approval comments: $COMMENTS"
 
-          if echo "$COMMENTS" | grep -q "approved"; then
-            echo "deployment_approved=true" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
+          if echo "$COMMENTS" | grep -iq "approved"; then
+            echo "deployment_approved=true" >> $GITHUB_ENV
+            echo "deployment_approved=true" >> $GITHUB_OUTPUT
           else
-            echo "deployment_approved=false" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
+            echo "deployment_approved=false" >> $GITHUB_ENV
+            echo "deployment_approved=false" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
 
   deploy-service:
     needs:
@@ -100,6 +100,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Debug Outputs
+        run: |
+          echo "requires_approval: ${{ needs.detect-networking-changes.outputs.requires_approval }}"
+          echo "deployment_approved: ${{ needs.request-approval.outputs.deployment_approved }}"
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
