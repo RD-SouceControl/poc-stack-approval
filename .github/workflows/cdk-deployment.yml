@@ -75,25 +75,28 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-      - name: Debug Approval Status
+      - name: Check Approval Issue
+        id: check_approval
         run: |
-          echo "Approval status: ${{ steps.approval.outputs.approval_status }}"
+          echo "Checking approval issue comments..."
+          COMMENTS=$(gh issue view --json comments --jq '.comments[].body' ${{ github.event.number }})
+          echo "Approval comments: $COMMENTS"
 
-      - name: Set Approval Output
-        id: set_approval
-        run: |
-          if [[ "${{ steps.approval.outputs.approval_status }}" == "approved" ]]; then
+          if echo "$COMMENTS" | grep -q "approved"; then
             echo "deployment_approved=true" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
           else
             echo "deployment_approved=false" | tee -a $GITHUB_ENV $GITHUB_OUTPUT
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
   deploy-service:
     needs:
       - detect-networking-changes
       - request-approval
-    if: success() || skipped()
+    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || needs.request-approval.outputs.deployment_approved == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
