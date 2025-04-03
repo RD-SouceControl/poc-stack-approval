@@ -23,9 +23,18 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       (github.event_name == 'pull_request' && needs.networking-status.outputs.networking_done == 'true')
     needs: networking-status
+    environment: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}
+    env:
+      ENV_PREFIX: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}
+
     steps:
       - uses: actions/checkout@v4
       
+      - name: Debug Environment Variables
+        run: |
+          echo "Deployment Environment: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}"
+          echo "ENV_PREFIX: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
