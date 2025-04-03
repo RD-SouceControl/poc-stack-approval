@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       requires_approval: ${{ steps.detect.outputs.requires_approval }}
+      deployment_approved: ${{ steps.detect.outputs.deployment_approved }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,21 +50,27 @@ jobs:
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
             echo "No changes detected in NetworkingStack"
             echo "requires_approval=false" >> $GITHUB_ENV
+            echo "deployment_approved=true" >> $GITHUB_ENV
             echo "requires_approval=false" >> $GITHUB_OUTPUT
+            echo "deployment_approved=true" >> $GITHUB_OUTPUT
           else
             echo "Changes detected in NetworkingStack"
             echo "requires_approval=true" >> $GITHUB_ENV
+            echo "deployment_approved=false" >> $GITHUB_ENV
             echo "requires_approval=true" >> $GITHUB_OUTPUT
-          fi
+            echo "deployment_approved=false" >> $GITHUB_OUTPUT
 
   request-approval:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
     permissions:
-      issues: write  # Grant permission to create approval issue
+      issues: write
+    outputs:
+      deployment_approved: ${{ steps.set_approval.outputs.deployment_approved }}
     steps:
       - name: Manual Workflow Approval
+        id: manual_approval
         uses: trstringer/manual-approval@v1.9.1
         with:
           secret: ${{ secrets.GITHUB_TOKEN }}
@@ -72,12 +79,21 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
+      - name: Set approval output
+        id: set_approval
+        run: |
+          if [[ "${{ steps.manual_approval.outputs.approval }}" == "approved" ]]; then
+            echo "deployment_approved=true" >> $GITHUB_ENV
+            echo "deployment_approved=true" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_approved=false" >> $GITHUB_ENV
+            echo "deployment_approved=false" >> $GITHUB_OUTPUT
 
   deploy-service:
-    needs: 
+    needs:
       - detect-networking-changes
-    if: needs.detect-networking-changes.outputs.requires_approval == 'false' || (needs.request-approval.result == 'success')
-
+      - request-approval
+    if: needs.detect-networking-changes.outputs.deployment_approved == 'true' || needs.request-approval.outputs.deployment_approved == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
