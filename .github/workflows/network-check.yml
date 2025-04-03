@@ -73,4 +73,47 @@ jobs:
           issue-title: "Approve Networking Changes"
           issue-body: "Please approve or deny the deployment of networking changes."
 
-  
+      - name: Check Approval Status
+        id: set_approval
+        run: |
+          if [[ "${{ steps.approval.outcome }}" == "success" ]]; then
+            echo "Manual approval succeeded ✅"
+            echo "deployment_approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Manual approval failed ❌"
+            echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  network-check:
+    needs: 
+      - detect-networking-changes
+      - request-approval
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      proceed_with_deployment: ${{ steps.decision.outputs.proceed_with_deployment }}
+    steps:
+      - name: Determine network check result
+        id: decision
+        run: |
+          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
+          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
+
+          echo "requires_approval: $requires_approval"
+          echo "deployment_approved: $deployment_approved"
+
+          if [[ "$requires_approval" == "false" ]]; then
+            echo "✅ No approval needed, proceeding with deployment."
+            echo "proceed_with_deployment=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$requires_approval" == "true" && "$deployment_approved" == "true" ]]; then
+            echo "✅ Approval granted, proceeding with deployment."
+            echo "proceed_with_deployment=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "❌ Approval denied or pending! Skipping deployment."
+          echo "proceed_with_deployment=false" >> "$GITHUB_OUTPUT"
+          exit 1
