@@ -8,7 +8,6 @@ export class CdkPocStack extends cdk.Stack {
 
     // The code that defines your stack goes here
 
-    // example resource
     // const queue = new sqs.Queue(this, 'CdkPocQueue', {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });

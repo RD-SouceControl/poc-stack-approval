@@ -9,6 +9,7 @@ on:
 
   pull_request:
     branches:
+      - master
       - feat/networking-flow
     paths-ignore:
       - 'charts/**'
