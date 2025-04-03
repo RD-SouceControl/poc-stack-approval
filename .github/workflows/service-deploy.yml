@@ -6,6 +6,12 @@ on:
     types:
       - completed
 
+  pull_request:
+    branches:
+      - feat/networking-flow
+    paths-ignore:
+      - 'charts/**'
+
 permissions:
   id-token: write
   contents: write
@@ -13,10 +19,22 @@ permissions:
 jobs:
   deploy-service:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'pull_request' && needs.networking-status.outputs.networking_done == 'true')
+    needs: networking-status
+    environment: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}
+    env:
+      ENV_PREFIX: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}
+
     steps:
       - uses: actions/checkout@v4
       
+      - name: Debug Environment Variables
+        run: |
+          echo "Deployment Environment: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}"
+          echo "ENV_PREFIX: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.base.ref }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -32,3 +50,14 @@ jobs:
       
       - name: Deploy ServiceStack
         run: cdk deploy ServiceStack --require-approval never
+
+  networking-status:
+    runs-on: ubuntu-latest
+    outputs:
+      networking_done: ${{ steps.check.outputs.networking_done }}
+    steps:
+      - name: Check Networking Stack Completion
+        id: check
+        run: |
+          echo "Networking Stack has been successfully deployed"
+          echo "networking_done=true" >> "$GITHUB_OUTPUT"
