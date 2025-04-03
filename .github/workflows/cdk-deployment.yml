@@ -99,24 +99,34 @@ jobs:
     steps:
       - name: Determine network check result
         run: |
-          if [[ "${{ needs.detect-networking-changes.outputs.requires_approval }}" == "true" && "${{ needs.request-approval.outputs.deployment_approved }}" != "true" ]]; then
+          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
+          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
+          
+          echo "requires_approval: $requires_approval"
+          echo "deployment_approved: $deployment_approved"
+
+          # If request-approval was skipped, manually set deployment_approved to true
+          if [[ "$requires_approval" == "false" ]]; then
+            echo "✅ No approval needed, passing network check."
+            exit 0
+          fi
+
+          # If approval was required but denied, fail the job
+          if [[ "$requires_approval" == "true" && "$deployment_approved" != "true" ]]; then
             echo "❌ Approval denied or pending! Failing stage."
             exit 1
           fi
+
           echo "✅ Network check stage passed!"
+
 
   # 🔹 STAGE 2: SERVICE DEPLOYMENT 🔹
   deploy-service:
     needs: network-check
-    if: success()
+    if: needs.network-check.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Debug Outputs
-        run: |
-          echo "requires_approval: ${{ needs.detect-networking-changes.outputs.requires_approval }}"
-          echo "deployment_approved: ${{ needs.request-approval.outputs.deployment_approved }}"
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
