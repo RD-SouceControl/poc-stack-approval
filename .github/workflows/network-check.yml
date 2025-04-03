@@ -1,4 +1,4 @@
-name: Networking Check & Approval
+name: Networking Stack & Approval
 
 on:
   push:

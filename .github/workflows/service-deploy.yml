@@ -2,7 +2,7 @@ name: Service Deployment
 
 on:
   workflow_run:
-    workflows: ["Networking Check & Approval"]
+    workflows: ["Networking Stack & Approval"]
     types:
       - completed
 
