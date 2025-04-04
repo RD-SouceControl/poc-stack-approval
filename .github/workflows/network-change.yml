@@ -27,7 +27,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
+      - name: Debug Environment Variables
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ENVIRONMENT="${{ github.ref_name }}"
+          else
+            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+          fi
+
+          echo "Deployment Environment: $ENVIRONMENT"
+          echo "ENV_PREFIX: $ENVIRONMENT"
+            
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -99,6 +110,21 @@ jobs:
     outputs:
       proceed_with_deployment: ${{ steps.decision.outputs.proceed_with_deployment }}
     steps:
+
+      - name: Set deployment environment
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "${{ github.ref_name }}" > env.txt
+          else
+            echo "${{ github.event.pull_request.base.ref }}" > env.txt
+          fi
+
+      - name: Upload environment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-info
+          path: env.txt
+
       - name: Determine network check result
         id: decision
         run: |
@@ -123,3 +149,5 @@ jobs:
           echo "Approval denied or pending! Skipping deployment."
           echo "proceed_with_deployment=false" >> "$GITHUB_OUTPUT"
           exit 1
+
+
