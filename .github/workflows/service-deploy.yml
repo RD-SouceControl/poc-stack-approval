@@ -1,13 +1,12 @@
 name: Service Deployment
 
 on:
-  workflow_call:
+  workflow_run:
     workflows: ["Networking Stack & Approval"]
     types:
       - completed
     branches:
       - feat/networking-flow
-      - master
 
   pull_request:
     branches:
