@@ -5,6 +5,8 @@ on:
     workflows: ["Networking Stack & Approval"]
     types:
       - completed
+    branches:
+      - feat/networking-flow
 
   pull_request:
     branches:
