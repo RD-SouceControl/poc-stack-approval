@@ -1,10 +1,11 @@
-name: Networking Stack & Approval
+name: Single-Workflow
 
 on:
   push:
     branches:
-      - feat/networking-flow
-      - master
+      # - feat/networking-flow
+      # - master
+      - dev
     paths-ignore:
       - 'charts/**'
 
