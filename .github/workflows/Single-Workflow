@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/networking-flow
+      - master
     paths-ignore:
       - 'charts/**'
 
@@ -101,38 +102,39 @@ jobs:
             echo "deployment_approved=false" >> "$GITHUB_OUTPUT"
           fi
 
-  status-check:
-    needs: 
-      - detect-networking-changes
-      - request-approval
-    if: always()
+  deploy-service:
+    needs: [detect-networking-changes, request-approval]
+    if: |
+      needs.detect-networking-changes.outputs.requires_approval == 'false' ||
+      (needs.detect-networking-changes.outputs.requires_approval == 'true' && needs.request-approval.outputs.deployment_approved == 'true')
     runs-on: ubuntu-latest
-    outputs:
-      proceed_with_deployment: ${{ steps.decision.outputs.proceed_with_deployment }}
     steps:
-      - name: Determine network check result
-        id: decision
+      - name: Determine Environment
         run: |
-          requires_approval="${{ needs.detect-networking-changes.outputs.requires_approval }}"
-          deployment_approved="${{ needs.request-approval.outputs.deployment_approved }}"
-
-          echo "requires_approval: $requires_approval"
-          echo "deployment_approved: $deployment_approved"
-
-          if [[ "$requires_approval" == "false" ]]; then
-            echo "No approval needed, proceeding with deployment."
-            echo "proceed_with_deployment=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            ENV="${{ github.event.workflow_run.head_branch }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ENV="${{ github.event.pull_request.base.ref }}"
+          else
+            ENV="${{ github.ref_name }}"
           fi
+          echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
+          echo "Environment resolved: $ENV"
 
-          if [[ "$requires_approval" == "true" && "$deployment_approved" == "true" ]]; then
-            echo "Approval granted, proceeding with deployment."
-            echo "proceed_with_deployment=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+      - uses: actions/checkout@v4
 
-          echo "Approval denied or pending! Skipping deployment."
-          echo "proceed_with_deployment=false" >> "$GITHUB_OUTPUT"
-          exit 1
-
-
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Deploy ServiceStack
+        run: cdk deploy ServiceStack --require-approval never

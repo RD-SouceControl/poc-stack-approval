@@ -7,7 +7,6 @@ on:
       - completed
     branches:
       - feat/networking-flow
-      - master
 
   pull_request:
     branches:
@@ -25,7 +24,7 @@ jobs:
     if: |
       github.event_name == 'pull_request' || 
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-# ${{ github.event.workflow_run.conclusion == 'success' }}
+     # ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Determine Environment
         run: |
@@ -39,19 +38,8 @@ jobs:
           echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
           echo "Environment resolved: $ENV"
 
-      - name: Debug Environment Variables
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            ENVIRONMENT="${{ github.ref_name }}"
-          else
-            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
-          fi
-
-          echo "Deployment Environment: $ENVIRONMENT"
-          echo "ENV_PREFIX: $ENVIRONMENT"
-
       - uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
