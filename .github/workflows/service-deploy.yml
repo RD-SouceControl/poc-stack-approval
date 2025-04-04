@@ -7,6 +7,7 @@ on:
       - completed
     branches:
       - feat/networking-flow
+      - master
 
   pull_request:
     branches:
