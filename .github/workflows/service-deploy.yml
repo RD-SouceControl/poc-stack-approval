@@ -10,13 +10,15 @@ on:
 
   push:
     branches:
-      - feat/networking-flow
+      - master
+      # - feat/networking-flow
     paths-ignore:
       - 'charts/**'
 
   pull_request:
     branches:
-      - feat/networking-flow
+      - master
+      # - feat/networking-flow
     paths-ignore:
       - 'charts/**'
 
