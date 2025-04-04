@@ -38,7 +38,21 @@ jobs:
 
           echo "Deployment Environment: $ENVIRONMENT"
           echo "ENV_PREFIX: $ENVIRONMENT"
-      
+
+      - name: Export environment name
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "${{ github.ref_name }}" > env.txt
+          else
+            echo "${{ github.event.pull_request.base.ref }}" > env.txt
+          fi
+          
+      - name: Upload environment artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: env-info
+          path: env.txt
+            
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:

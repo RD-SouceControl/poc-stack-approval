@@ -24,7 +24,30 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Download environment artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: env-info
+
+      - name: Read environment info
+        id: env
+        run: |
+          ENVIRONMENT=$(cat env.txt)
+          echo "ENV_PREFIX=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "Deployment Environment: $ENVIRONMENT"
+
+      - name: Debug Environment Variables
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ENVIRONMENT="${{ github.ref_name }}"
+          else
+            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+          fi
+
+          echo "Deployment Environment: $ENVIRONMENT"
+          echo "ENV_PREFIX: $ENVIRONMENT"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
