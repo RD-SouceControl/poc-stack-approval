@@ -3,14 +3,15 @@ name: Networking Stack & Approval
 on:
   push:
     branches:
-      - feat/networking-flow
+      # - feat/networking-flow
+      - master
     paths-ignore:
       - 'charts/**'
 
   pull_request:
     branches:
       - master
-      - feat/networking-flow
+      # - feat/networking-flow
     paths-ignore:
       - 'charts/**'
 

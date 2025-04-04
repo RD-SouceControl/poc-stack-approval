@@ -1,16 +1,24 @@
-name: Service Deployment
+name: Service Deployment (Feature) ++
 
 on:
   workflow_run:
     workflows: ["Networking Stack & Approval"]
     types:
       - completed
+    # branches:
+    #   - feat/networking-flow
+
+  push:
     branches:
-      - feat/networking-flow
+      - master
+      # - feat/networking-flow
+    paths-ignore:
+      - 'charts/**'
 
   pull_request:
     branches:
-      - feat/networking-flow
+      - master
+      # - feat/networking-flow
     paths-ignore:
       - 'charts/**'
 
@@ -38,7 +46,10 @@ jobs:
           echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
           echo "Environment resolved: $ENV"
 
-      - uses: actions/checkout@v4
+      - name: Checkout the correct branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ENV_PREFIX }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
