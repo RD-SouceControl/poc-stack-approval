@@ -5,8 +5,14 @@ on:
     workflows: ["Networking Stack & Approval"]
     types:
       - completed
+    # branches:
+    #   - feat/networking-flow
+
+  push:
     branches:
       - feat/networking-flow
+    paths-ignore:
+      - 'charts/**'
 
   pull_request:
     branches:
