@@ -1,26 +1,32 @@
-name: Service Deployment (Feature) ++
+name: Service Deployment (Feature)
 
 on:
-  workflow_run:
-    workflows: ["Networking Stack & Approval"]
-    types:
-      - completed
-    # branches:
-    #   - feat/networking-flow
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
 
-  push:
-    branches:
-      - master
-      # - feat/networking-flow
-    paths-ignore:
-      - 'charts/**'
+#   workflow_run:
+#     workflows: ["Networking Stack & Approval"]
+#     types:
+#       - completed
+#     branches:
+#       - feat/networking-flow
 
-  pull_request:
-    branches:
-      - master
-      # - feat/networking-flow
-    paths-ignore:
-      - 'charts/**'
+#   push:
+#     branches:
+#       - master
+#       # - feat/networking-flow
+#     paths-ignore:
+#       - 'charts/**'
+
+#   pull_request:
+#     branches:
+#       - master
+#       # - feat/networking-flow
+#     paths-ignore:
+#       - 'charts/**'
 
 permissions:
   id-token: write
