@@ -40,22 +40,22 @@ jobs:
     #   (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event_name == 'push')
      # ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Determine Environment
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            ENV="${{ github.event.workflow_run.head_branch }}"
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            ENV="${{ github.event.pull_request.base.ref }}"
-          else
-            ENV="${{ github.ref_name }}"
-          fi
-          echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
-          echo "Environment resolved: $ENV"
+      # - name: Determine Environment
+      #   run: |
+      #     if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+      #       ENV="${{ github.event.workflow_run.head_branch }}"
+      #     elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+      #       ENV="${{ github.event.pull_request.base.ref }}"
+      #     else
+      #       ENV="${{ github.ref_name }}"
+      #     fi
+      #     echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
+      #     echo "Environment resolved: $ENV"
 
       - name: Checkout the correct branch
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.ENV_PREFIX }}
+        # with:
+        #   ref: ${{ env.ENV_PREFIX }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
