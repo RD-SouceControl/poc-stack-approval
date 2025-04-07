@@ -136,13 +136,64 @@ jobs:
           echo "proceed_with_deployment=false" >> "$GITHUB_OUTPUT"
           exit 1
 
+  # deploy-service:
+  #   needs: status-check
+  #   if: always()
+  #   uses: ./.github/workflows/service-deploy.yml
+  #   with:
+  #     environment: ${{ github.ref_name }}
+  #     proceed_with_deployment: ${{ needs.status-check.outputs.proceed_with_deployment }}
+  #   secrets:
+  #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
   deploy-service:
+    runs-on: ubuntu-latest
     needs: status-check
     if: always()
-    uses: ./.github/workflows/service-deploy.yml
-    with:
-      environment: ${{ github.ref_name }}
-      proceed_with_deployment: ${{ needs.status-check.outputs.proceed_with_deployment }}
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Check deployment approval status
+        id: check
+        run: |
+          echo "Deployment approved? -> ${{ inputs.proceed_with_deployment }}"
+          if [[ "${{ inputs.proceed_with_deployment }}" != "true" ]]; then
+            echo "Deployment was not approved. Skipping remaining steps."
+            exit 1
+          fi
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Debug Environment Variables
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ENVIRONMENT="${{ github.ref_name }}"
+          else
+            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+          fi
+
+          echo "Deployment Environment: $ENVIRONMENT"
+          echo "ENV_PREFIX: $ENVIRONMENT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: CDK Deploy ServiceStack
+        run: |
+          echo "Deploying Service Stack to environment: ${{ inputs.environment }}"
+          cdk deploy ServiceStack --require-approval never
