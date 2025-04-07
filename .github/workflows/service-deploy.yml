@@ -27,12 +27,12 @@ on:
 #     paths-ignore:
 #       - 'charts/**'
 
-#   pull_request:
-#     branches:
-#       - master
-#       # - feat/networking-flow
-#     paths-ignore:
-#       - 'charts/**'
+  pull_request:
+    branches:
+      - master
+      # - feat/networking-flow
+    paths-ignore:
+      - 'charts/**'
 
 permissions:
   id-token: write
