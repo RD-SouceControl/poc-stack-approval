@@ -1,55 +1,58 @@
-name: Service Deployment (Feature) ++
+name: Deploy Service Stack +
 
 on:
-  workflow_run:
-    workflows: ["Networking Stack & Approval"]
-    types:
-      - completed
-    # branches:
-    #   - feat/networking-flow
-
-  push:
-    branches:
-      - master
-      # - feat/networking-flow
-    paths-ignore:
-      - 'charts/**'
-
-  pull_request:
-    branches:
-      - master
-      # - feat/networking-flow
-    paths-ignore:
-      - 'charts/**'
-
-permissions:
-  id-token: write
-  contents: write
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      proceed_with_deployment:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 
 jobs:
-  deploy-service:
+  deploy:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event_name == 'push')
-     # ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
-      - name: Determine Environment
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            ENV="${{ github.event.workflow_run.head_branch }}"
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            ENV="${{ github.event.pull_request.base.ref }}"
-          else
-            ENV="${{ github.ref_name }}"
-          fi
-          echo "ENV_PREFIX=$ENV" >> $GITHUB_ENV
-          echo "Environment resolved: $ENV"
 
-      - name: Checkout the correct branch
+    steps:
+      - name: Check deployment approval status
+        id: check
+        run: |
+          echo "Deployment approved? -> ${{ inputs.proceed_with_deployment }}"
+          if [[ "${{ inputs.proceed_with_deployment }}" != "true" ]]; then
+            echo "Deployment was not approved. Skipping remaining steps."
+            exit 1
+          fi
+
+      - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Debug Environment Variables
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ENVIRONMENT="${{ github.ref_name }}"
+          else
+            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+          fi
+
+          echo "Deployment Environment: $ENVIRONMENT"
+          echo "ENV_PREFIX: $ENVIRONMENT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          ref: ${{ env.ENV_PREFIX }}
+          node-version: '20'
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Install dependencies
+        run: npm install
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -57,12 +60,8 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
-      
-      - name: Install dependencies
-        run: npm install
-      
-      - name: Deploy ServiceStack
-        run: cdk deploy ServiceStack --require-approval never
+
+      - name: CDK Deploy ServiceStack
+        run: |
+          echo "Deploying Service Stack to environment: ${{ inputs.environment }}"
+          cdk deploy ServiceStack --require-approval never
