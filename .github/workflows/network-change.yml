@@ -139,7 +139,7 @@ jobs:
   deploy-service:
     needs: status-check
     if: needs.status-check.outputs.proceed_with_deployment == 'true'
-    uses: ./.github/workflows/service-deployment.yml
+    uses: ./.github/workflows/service-deploy.yml
     with:
       environment: ${{ github.ref_name }}
     secrets:
