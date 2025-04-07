@@ -32,6 +32,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Debug Environment Variables
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            ENVIRONMENT="${{ github.ref_name }}"
+          else
+            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+          fi
+
+          echo "Deployment Environment: $ENVIRONMENT"
+          echo "ENV_PREFIX: $ENVIRONMENT"
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
