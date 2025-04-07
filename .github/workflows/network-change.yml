@@ -135,10 +135,10 @@ jobs:
           echo "Approval denied or pending! Skipping deployment."
           echo "proceed_with_deployment=false" >> "$GITHUB_OUTPUT"
           exit 1
-          
+
   deploy-service:
     needs: status-check
     if: needs.status-check.outputs.proceed_with_deployment == 'true'
-    uses: ./.github/workflows/service-deployment.yml
+    uses: ./.github/workflows/service-deploy.yml
     with:
       environment: ${{ github.ref_name }}
