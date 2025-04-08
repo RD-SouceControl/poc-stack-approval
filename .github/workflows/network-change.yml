@@ -83,16 +83,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Extract and format CDK diff
-        shell: bash
         run: |
-          echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "## CDK Networking Resource Changes Table" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Action | Resource Type | Logical ID |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|---------------|------------|" >> $GITHUB_STEP_SUMMARY
 
-          DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
-
-          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+')
+          RESOURCE_LINES=$(echo "${{ needs.detect-networking-changes.outputs.diff_content }}" | awk '/^Resources$/,/^$/' | grep -E '^\[.\]')
 
           COUNT=0
 
@@ -106,15 +103,16 @@ jobs:
             esac
 
             RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
-            LOGICAL_ID=$(echo "$line" | cut -d' ' -f3- | sed 's/ destroy$//')
 
-            echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
+            # Get logical ID: everything after the 3rd field, trim trailing "destroy" if present
+            LOGICAL_ID=$(echo "$line" | cut -d' ' -f4- | sed 's/ destroy$//')
+
+            echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> $GITHUB_STEP_SUMMARY
             COUNT=$((COUNT + 1))
           done <<< "$RESOURCE_LINES"
 
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
-
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo " Total Resource Changes: $COUNT" >> $GITHUB_STEP_SUMMARY
 
 
 
