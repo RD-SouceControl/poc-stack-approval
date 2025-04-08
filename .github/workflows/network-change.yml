@@ -77,12 +77,8 @@ jobs:
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
-  output-network-changes:
-    needs: detect-networking-changes
-    if: needs.detect-networking-changes.outputs.requires_approval == 'true'
-    runs-on: ubuntu-latest
-    steps:
       - name: Extract and format CDK diff
+        shell: bash
         run: |
           echo "## CDK Networking Resource Changes Table" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -94,8 +90,8 @@ jobs:
           COUNT=0
 
           while IFS= read -r line; do
-            # Skip nested or malformed lines (e.g., indented blocks or diffs)
-            if [[ "$line" =~ ^\ └─ ]] || [[ "$line" =~ ^\ \ \ ]] || [[ "$line" =~ ^@@ ]]; then
+            # Skip nested diff lines or malformed lines
+            if [[ "$line" =~ ^[[:space:]]+└ ]] || [[ "$line" =~ ^[[:space:]]+\[ ]] || [[ "$line" =~ ^@@ ]]; then
               continue
             fi
 
@@ -116,6 +112,7 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+
 
 
 
