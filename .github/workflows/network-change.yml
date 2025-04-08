@@ -103,14 +103,17 @@ jobs:
             esac
 
             RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
-            LOGICAL_ID=$(echo "$line" | awk '{print $NF}')
-            
+            # Extract logical ID: everything after the last space, remove " destroy" if present
+            RAW_LOGICAL_ID=$(echo "$line" | awk '{print $NF}')
+            LOGICAL_ID=$(echo "$RAW_LOGICAL_ID" | sed 's/ destroy$//')
+
             echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> $GITHUB_STEP_SUMMARY
             COUNT=$((COUNT + 1))
           done <<< "$RESOURCE_LINES"
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**🔢 Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "** Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+
 
 
 
