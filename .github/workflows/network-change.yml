@@ -77,7 +77,7 @@ jobs:
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
-  format-networking-diff:
+  output-network-changes:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
