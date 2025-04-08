@@ -37,19 +37,19 @@ export class NetworkStack extends cdk.Stack {
       ],
     });
 
-    // ALB in the public subnet
-    const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
-      vpc: extraVpc,
-      internetFacing: true,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-    });
+    // // ALB in the public subnet
+    // const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
+    //   vpc: extraVpc,
+    //   internetFacing: true,
+    //   vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+    // });
 
     new cdk.CfnOutput(this, 'ExtraVpcId', {
       value: extraVpc.vpcId,
     });
 
-    new cdk.CfnOutput(this, 'ExtraALBDNS', {
-      value: alb.loadBalancerDnsName,
-    });
+    // new cdk.CfnOutput(this, 'ExtraALBDNS', {
+    //   value: alb.loadBalancerDnsName,
+    // });
   }
 }
