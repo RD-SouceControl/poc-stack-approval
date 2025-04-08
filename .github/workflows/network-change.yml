@@ -92,7 +92,7 @@ jobs:
 
           DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
 
-          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[.\]')
+          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+')
 
           COUNT=0
 
@@ -106,7 +106,7 @@ jobs:
             esac
 
             RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
-            LOGICAL_ID=$(echo "$line" | cut -d' ' -f4- | sed 's/ destroy$//')
+            LOGICAL_ID=$(echo "$line" | cut -d' ' -f3- | sed 's/ destroy$//')
 
             echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
             COUNT=$((COUNT + 1))
