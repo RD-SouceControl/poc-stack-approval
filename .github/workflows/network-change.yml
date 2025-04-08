@@ -11,7 +11,6 @@ on:
   pull_request:
     branches:
       - master
-      # - feat/networking-flow
     paths-ignore:
       - 'charts/**'
 
@@ -65,18 +64,15 @@ jobs:
           DIFF_OUTPUT=$(cdk diff NetworkStack --verbose || true)
           echo "$DIFF_OUTPUT"
 
-          # Write CDK diff to the job summary for better visibility
-          echo "## 💡 CDK Diff Summary for NetworkStack" >> $GITHUB_STEP_SUMMARY
+          echo "## CDK Diff Summary for NetworkStack" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`diff" >> $GITHUB_STEP_SUMMARY
           echo "$DIFF_OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          # Save diff output as a job output in case we want to reuse
           echo "diff_content<<EOF" >> "$GITHUB_OUTPUT"
           echo "$DIFF_OUTPUT" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
-          # Check if there were actual changes
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
             echo "No changes detected in NetworkingStack"
             echo "requires_approval=false" >> "$GITHUB_OUTPUT"
@@ -84,6 +80,66 @@ jobs:
             echo "Changes detected in NetworkingStack"
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
+
+  format-networking-diff:
+    needs: detect-networking-changes
+    if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install CDK and dependencies
+        run: |
+          npm install -g aws-cdk
+          npm ci
+
+      - name: Capture CDK Diff Output
+        id: diff
+        run: |
+          cdk diff NetworkStack > diff.txt || true
+          cat diff.txt
+
+      - name: Format CDK Diff to Markdown Table
+        id: format
+        run: |
+          echo "### 💡 CDK Diff Summary for \`NetworkStack\`" >> summary.md
+          echo "| Action | Resource | Details |" >> summary.md
+          echo "|--------|----------|---------|" >> summary.md
+          awk '/\+\+\+/,/---/ { print }' diff.txt | sed 's/^[[:space:]]*//' | \
+          awk '
+            BEGIN { action="" }
+            /^(\+\+\+|\-\-\-)/ {
+              if ($1 == "+++") action="Add"
+              else if ($1 == "---") action="Remove"
+              next
+            }
+            NF > 0 {
+              print "| " action " | " $1 " | " $2 " |"
+            }
+          ' >> summary.md
+
+      - name: Upload CDK Diff Summary to Job Summary
+        run: cat summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-file: summary.md
 
       # - name: cdk diff networking
       #   id: detect
