@@ -56,7 +56,7 @@ jobs:
         run: npm install -g aws-cdk
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: cdk diff networking
         id: detect
