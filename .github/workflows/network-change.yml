@@ -82,40 +82,38 @@ jobs:
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
     steps:
-    - name: Extract and format CDK diff
-      shell: bash
-      run: |
-        echo "## CDK Networking Resource Changes Table" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Action | Resource Type | Logical ID |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|---------------|------------|" >> $GITHUB_STEP_SUMMARY
+      - name: Extract and format CDK diff
+        shell: bash
+        run: |
+          echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
-        # Extract top-level resource lines only (skip patches, nested props, etc.)
-        RESOURCE_LINES=$(echo "${{ needs.detect-networking-changes.outputs.diff_content }}" \
-          | awk '/^Resources$/,/^$/ { if ($1 ~ /^\[[+\-~]\]/ && $0 !~ /^.*@@ .* @@$/) print }')
+          DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
 
-        COUNT=0
+          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[.\]')
 
-        while IFS= read -r line; do
-          ACTION_CHAR=$(echo "$line" | cut -c2)
-          case "$ACTION_CHAR" in
-            "+") ACTION="Add" ;;
-            "-") ACTION="Destroy" ;;
-            "~") ACTION="Modify" ;;
-            *) ACTION="Unknown" ;;
-          esac
+          COUNT=0
 
-          RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
+          while IFS= read -r line; do
+            ACTION_CHAR=$(echo "$line" | cut -c2)
+            case "$ACTION_CHAR" in
+              "+") ACTION="Add" ;;
+              "-") ACTION="Destroy" ;;
+              "~") ACTION="Modify" ;;
+              *) ACTION="Unknown" ;;
+            esac
 
-          # Extract everything after the 3rd field for Logical ID
-          LOGICAL_ID=$(echo "$line" | awk '{for (i=4; i<=NF; i++) printf $i " "; print ""}' | sed 's/ destroy$//' | xargs)
+            RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
+            LOGICAL_ID=$(echo "$line" | cut -d' ' -f4- | sed 's/ destroy$//')
 
-          echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> $GITHUB_STEP_SUMMARY
-          COUNT=$((COUNT + 1))
-        done <<< "$RESOURCE_LINES"
+            echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
+            COUNT=$((COUNT + 1))
+          done <<< "$RESOURCE_LINES"
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
 
 
