@@ -97,7 +97,7 @@ jobs:
             ACTION_CHAR=$(echo "$line" | cut -c2)
             case "$ACTION_CHAR" in
               "+") ACTION="Add" ;;
-              "-") ACTION="Delete" ;;
+              "-") ACTION="Destroy" ;;
               "~") ACTION="Modify" ;;
               *) ACTION="Unknown" ;;
             esac
@@ -112,7 +112,7 @@ jobs:
           done <<< "$RESOURCE_LINES"
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "** Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+          echo " Total Resource Changes: $COUNT" >> $GITHUB_STEP_SUMMARY
 
 
 
