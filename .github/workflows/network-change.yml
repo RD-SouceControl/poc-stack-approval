@@ -89,11 +89,16 @@ jobs:
           echo "| Action | Resource Type | Logical ID |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|---------------|------------|" >> $GITHUB_STEP_SUMMARY
 
-          RESOURCE_LINES=$(echo "${{ needs.detect-networking-changes.outputs.diff_content }}" | awk '/^Resources$/,/^$/' | grep -E '^\[.\]')
+          RESOURCE_LINES=$(echo "${{ needs.detect-networking-changes.outputs.diff_content }}" | awk '/^Resources$/,/^$/' | grep -E '^\[[+-~]\]')
 
           COUNT=0
 
           while IFS= read -r line; do
+            # Skip nested or malformed lines (e.g., indented blocks or diffs)
+            if [[ "$line" =~ ^\ └─ ]] || [[ "$line" =~ ^\ \ \ ]] || [[ "$line" =~ ^@@ ]]; then
+              continue
+            fi
+
             ACTION_CHAR=$(echo "$line" | cut -c2)
             case "$ACTION_CHAR" in
               "+") ACTION="Add" ;;
@@ -103,8 +108,6 @@ jobs:
             esac
 
             RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
-
-            # Get logical ID: everything after the 3rd field, trim trailing "destroy" if present
             LOGICAL_ID=$(echo "$line" | cut -d' ' -f4- | sed 's/ destroy$//')
 
             echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> $GITHUB_STEP_SUMMARY
@@ -112,7 +115,8 @@ jobs:
           done <<< "$RESOURCE_LINES"
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo " Total Resource Changes: $COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Resource Changes:** $COUNT" >> $GITHUB_STEP_SUMMARY
+
 
 
 
