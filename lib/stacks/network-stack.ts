@@ -12,30 +12,29 @@ export class NetworkStack extends cdk.Stack {
     // Original VPC (unchanged)
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 2,
-      natGateways: 1,
+      natGateways: 0,
     });
 
     new cdk.CfnOutput(this, 'VpcId', {
       value: this.vpc.vpcId,
     });
 
-    // Additional VPC with NAT, Public and Private Subnets
-    // const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
-    //   maxAzs: 2,
-    //   natGateways: 1,
-    //   subnetConfiguration: [
-    //     {
-    //       cidrMask: 24,
-    //       name: 'ExtraPublic',
-    //       subnetType: ec2.SubnetType.PUBLIC,
-    //     },
-    //     {
-    //       cidrMask: 24,
-    //       name: 'ExtraPrivate',
-    //       subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-    //     },
-    //   ],
-    // });
+    const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
+      maxAzs: 2,
+      natGateways: 1,
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: 'ExtraPublic',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+        {
+          cidrMask: 24,
+          name: 'ExtraPrivate',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        },
+      ],
+    });
 
     // // ALB in the public subnet
     // const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
