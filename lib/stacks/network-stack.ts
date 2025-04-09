@@ -12,7 +12,7 @@ export class NetworkStack extends cdk.Stack {
     // Original VPC (unchanged)
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 2,
-      natGateways: 1,
+      natGateways: 0,
     });
 
     new cdk.CfnOutput(this, 'VpcId', {
@@ -37,18 +37,18 @@ export class NetworkStack extends cdk.Stack {
     });
 
     // // ALB in the public subnet
-    // const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
-    //   vpc: extraVpc,
-    //   internetFacing: true,
-    //   vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-    // });
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
+      vpc: extraVpc,
+      internetFacing: true,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+    });
 
-    // new cdk.CfnOutput(this, 'ExtraVpcId', {
-    //   value: extraVpc.vpcId,
-    // });
+    new cdk.CfnOutput(this, 'ExtraVpcId', {
+      value: extraVpc.vpcId,
+    });
 
-    // new cdk.CfnOutput(this, 'ExtraALBDNS', {
-    //   value: alb.loadBalancerDnsName,
-    // });
+    new cdk.CfnOutput(this, 'ExtraALBDNS', {
+      value: alb.loadBalancerDnsName,
+    });
   }
 }
