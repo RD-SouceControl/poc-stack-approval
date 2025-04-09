@@ -74,57 +74,38 @@ jobs:
       - name: Format and print CDK diff as Markdown table
         shell: bash
         run: |
-
-          echo "Step 1"
+          echo "Step 1: Raw Diff Output"
           echo "$DIFF_OUTPUT"
 
+          echo "## 🧾 CDK Networking Resource Changes" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
+          # Filter only direct resource-level changes (ignore nested like └─ or │)
+          RESOURCE_LINES=$(echo "$DIFF_OUTPUT" | grep -E '^\[\+|\[-|\[~\]' | grep -vE '└|│')
 
+          COUNT=0
 
-  # output-network-changes:
-  #   needs: detect-networking-changes
-  #   if: needs.detect-networking-changes.outputs.requires_approval == 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Extract and format CDK diff
-  #       shell: bash
-  #       run: |
-  #         echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r line; do
+            ACTION_CHAR=$(echo "$line" | cut -c2)
+            case "$ACTION_CHAR" in
+              "+") ACTION="Add" ;;
+              "-") ACTION="Destroy" ;;
+              "~") ACTION="Modify" ;;
+              *) ACTION="Unknown" ;;
+            esac
 
-  #         DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
+            RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
+            LOGICAL_ID=$(echo "$line" | cut -d' ' -f3-)
 
-  #         # Extract only well-formed CDK resource change lines
-  #         RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ')
+            echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
+            COUNT=$((COUNT + 1))
+          done <<< "$RESOURCE_LINES"
 
-  #         COUNT=0
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
-  #         while IFS= read -r line; do
-  #           # Must have at least 3 tokens: [~] AWS::X::Y LogicalID
-  #           TOKENS=$(echo "$line" | awk '{print NF}')
-  #           if [[ $TOKENS -lt 3 ]]; then
-  #             continue  # skip malformed or nested lines
-  #           fi
-
-  #           ACTION_CHAR=$(echo "$line" | cut -c2)
-  #           case "$ACTION_CHAR" in
-  #             "+") ACTION="Add" ;;
-  #             "-") ACTION="Destroy" ;;
-  #             "~") ACTION="Modify" ;;
-  #             *) ACTION="Unknown" ;;
-  #           esac
-
-  #           RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
-  #           LOGICAL_ID=$(echo "$line" | cut -d' ' -f3- | sed 's/ destroy$//')
-
-  #           echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
-  #           COUNT=$((COUNT + 1))
-  #         done <<< "$RESOURCE_LINES"
-
-  #         echo "" >> "$GITHUB_STEP_SUMMARY"
-  #         echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
 
 
