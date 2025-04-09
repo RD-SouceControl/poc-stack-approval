@@ -85,23 +85,33 @@ jobs:
       - name: Extract and format CDK diff
         shell: bash
         run: |
+          set -euo pipefail
+
           echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
           DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
+          echo "[DEBUG] Starting to parse CDK diff output..."
+          echo "[DEBUG] Raw diff content:"
+          echo "$DIFF_CONTENT"
 
-          # Extract only well-formed CDK resource change lines
+          # Extract the "Resources" section
           RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ')
+          echo "[DEBUG] Filtered resource lines:"
+          echo "$RESOURCE_LINES"
 
           COUNT=0
 
           while IFS= read -r line; do
-            # Must have at least 3 tokens: [~] AWS::X::Y LogicalID
-            TOKENS=$(echo "$line" | awk '{print NF}')
-            if [[ $TOKENS -lt 3 ]]; then
-              continue  # skip malformed or nested lines
+            echo "[DEBUG] Processing line: $line"
+
+            # Count tokens
+            TOKEN_COUNT=$(echo "$line" | awk '{print NF}')
+            if [[ "$TOKEN_COUNT" -lt 3 ]]; then
+              echo "[DEBUG] Skipping malformed or nested line: $line"
+              continue
             fi
 
             ACTION_CHAR=$(echo "$line" | cut -c2)
@@ -117,10 +127,57 @@ jobs:
 
             echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
             COUNT=$((COUNT + 1))
+
           done <<< "$RESOURCE_LINES"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
+
+
+  # output-network-changes:
+  #   needs: detect-networking-changes
+  #   if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Extract and format CDK diff
+  #       shell: bash
+  #       run: |
+  #         echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
+
+  #         DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
+
+  #         # Extract only well-formed CDK resource change lines
+  #         RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ')
+
+  #         COUNT=0
+
+  #         while IFS= read -r line; do
+  #           # Must have at least 3 tokens: [~] AWS::X::Y LogicalID
+  #           TOKENS=$(echo "$line" | awk '{print NF}')
+  #           if [[ $TOKENS -lt 3 ]]; then
+  #             continue  # skip malformed or nested lines
+  #           fi
+
+  #           ACTION_CHAR=$(echo "$line" | cut -c2)
+  #           case "$ACTION_CHAR" in
+  #             "+") ACTION="Add" ;;
+  #             "-") ACTION="Destroy" ;;
+  #             "~") ACTION="Modify" ;;
+  #             *) ACTION="Unknown" ;;
+  #           esac
+
+  #           RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
+  #           LOGICAL_ID=$(echo "$line" | cut -d' ' -f3- | sed 's/ destroy$//')
+
+  #           echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
+  #           COUNT=$((COUNT + 1))
+  #         done <<< "$RESOURCE_LINES"
+
+  #         echo "" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
 
 
