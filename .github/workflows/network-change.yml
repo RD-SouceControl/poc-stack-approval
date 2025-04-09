@@ -29,17 +29,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug Environment Variables
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            ENVIRONMENT="${{ github.ref_name }}"
-          else
-            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
-          fi
-
-          echo "Deployment Environment: $ENVIRONMENT"
-          echo "ENV_PREFIX: $ENVIRONMENT"
-
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -62,12 +51,10 @@ jobs:
         id: detect
         run: |
           echo "Running CDK Diff for NetworkStack..."
-          DIFF_OUTPUT=$(cdk diff NetworkStack --verbose || true)
+          DIFF_OUTPUT=$(cdk diff NetworkStack || true)
           echo "$DIFF_OUTPUT"
 
-          echo "diff_content<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$DIFF_OUTPUT" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          printf "diff_content<<EOF\n%s\nEOF\n" "$DIFF_OUTPUT" >> "$GITHUB_OUTPUT"
 
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
             echo "No changes detected in NetworkingStack"
@@ -80,6 +67,8 @@ jobs:
   output-network-changes:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+    env:
+      DIFF_OUTPUT: ${{ needs.detect-networking-changes.outputs.diff_content }}
     runs-on: ubuntu-latest
     steps:
       - name: Format and print CDK diff as Markdown table
@@ -87,7 +76,7 @@ jobs:
         run: |
 
           echo "Step 1"
-          echo "${{ needs.detect-networking-changes.outputs.diff_content }}"
+          echo "$DIFF_OUTPUT"
 
 
 
