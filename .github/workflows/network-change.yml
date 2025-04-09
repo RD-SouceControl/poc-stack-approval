@@ -92,14 +92,21 @@ jobs:
           echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
+          echo "Step 1"
+
+
           DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
           echo "[DEBUG] Raw diff content:"
           echo "$DIFF_CONTENT"
+
+          echo "Step 2"
 
           # Extract the resource lines
           RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ' || true)
           echo "[DEBUG] Filtered resource lines:"
           echo "$RESOURCE_LINES"
+
+          echo "Step 3"
 
           COUNT=0
 
@@ -112,6 +119,7 @@ jobs:
               echo "[DEBUG] Skipping malformed or nested line: $line"
               continue
             fi
+            
 
             ACTION_CHAR=$(echo "$line" | cut -c2)
             case "$ACTION_CHAR" in
