@@ -152,7 +152,7 @@ jobs:
   request-approval:
     needs:
       - detect-networking-changes
-      - output-network-changes
+      # - output-network-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
     permissions:
