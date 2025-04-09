@@ -19,6 +19,65 @@ permissions:
   contents: write
 
 jobs:
+  # detect-networking-changes:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     requires_approval: ${{ steps.detect.outputs.requires_approval }}
+  #     diff_content: ${{ steps.detect.outputs.diff_content }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: Debug Environment Variables
+  #       run: |
+  #         if [[ "${{ github.event_name }}" == "push" ]]; then
+  #           ENVIRONMENT="${{ github.ref_name }}"
+  #         else
+  #           ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
+  #         fi
+
+  #         echo "Deployment Environment: $ENVIRONMENT"
+  #         echo "ENV_PREFIX: $ENVIRONMENT"
+
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '20'
+
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v3
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+
+  #     - name: Install AWS CDK
+  #       run: npm install -g aws-cdk
+
+  #     - name: Install dependencies
+  #       run: npm ci
+
+  #     - name: cdk diff networking
+  #       id: detect
+  #       run: |
+  #         echo "Running CDK Diff for NetworkStack..."
+  #         DIFF_OUTPUT=$(cdk diff NetworkStack --verbose || true)
+  #         echo "$DIFF_OUTPUT"
+
+  #         echo "diff_content<<EOF" >> "$GITHUB_OUTPUT"
+  #         echo "$DIFF_OUTPUT" >> "$GITHUB_OUTPUT"
+  #         echo "EOF" >> "$GITHUB_OUTPUT"
+
+  #         if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
+  #           echo "No changes detected in NetworkingStack"
+  #           echo "requires_approval=false" >> "$GITHUB_OUTPUT"
+  #         else
+  #           echo "Changes detected in NetworkingStack"
+  #           echo "requires_approval=true" >> "$GITHUB_OUTPUT"
+  #         fi
+
+
   detect-networking-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -26,19 +85,6 @@ jobs:
       diff_content: ${{ steps.detect.outputs.diff_content }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Debug Environment Variables
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            ENVIRONMENT="${{ github.ref_name }}"
-          else
-            ENVIRONMENT="${{ github.event.pull_request.base.ref }}"
-          fi
-
-          echo "Deployment Environment: $ENVIRONMENT"
-          echo "ENV_PREFIX: $ENVIRONMENT"
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -58,45 +104,54 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: cdk diff networking
+      - name: Run CDK Diff and capture output
         id: detect
+        shell: bash
         run: |
+          set -eo pipefail
+
           echo "Running CDK Diff for NetworkStack..."
-          DIFF_OUTPUT=$(cdk diff NetworkStack --verbose || true)
-          echo "$DIFF_OUTPUT"
+          DIFF_OUTPUT=$(cdk diff NetworkStack || true)
 
-          echo "diff_content<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$DIFF_OUTPUT" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "Saving diff output to job output..."
 
+          # Save multiline output safely
+          {
+            echo 'diff_content<<EOF'
+            echo "$DIFF_OUTPUT"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          # Determine if there were changes
           if [[ -z "$DIFF_OUTPUT" || "$DIFF_OUTPUT" == *"There were no differences"* ]]; then
-            echo "No changes detected in NetworkingStack"
             echo "requires_approval=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Changes detected in NetworkingStack"
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
-
 
   output-network-changes:
     needs: detect-networking-changes
     if: needs.detect-networking-changes.outputs.requires_approval == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Extract and format CDK diff
+      - name: Format and print CDK diff as Markdown table
         shell: bash
         run: |
-          set -eo pipefail  # Avoid unbound variable errors
+          set -eo pipefail
 
-          DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
+          echo "Step 1"
+          RAW_DIFF="${{ needs.detect-networking-changes.outputs.diff_content }}"
 
+          echo "[DEBUG] Raw diff content:"
+          echo "$RAW_DIFF" > raw_diff.txt
+          cat raw_diff.txt
+
+          echo "Step 2 - Generating summary table"
           echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
-          # Extract only relevant resource lines
-          echo "$DIFF_CONTENT" | grep -E '^\[\+|\[-|\[~' | while read -r line; do
+          echo "$RAW_DIFF" | grep -E '^\[\+|\[-|\[~' | while read -r line; do
             ACTION=$(echo "$line" | cut -c2)
             DETAILS=$(echo "$line" | cut -c5-)
             RESOURCE_TYPE=$(echo "$DETAILS" | awk '{print $1}')
