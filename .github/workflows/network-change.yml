@@ -139,10 +139,6 @@ jobs:
         run: |
 
           echo "Step 1"
-
-          # RAW_DIFF="${{ needs.detect-networking-changes.outputs.diff_content }}"
-
-          # echo "[DEBUG] Raw diff content:"
           echo "${{ needs.detect-networking-changes.outputs.diff_content }}" > raw_diff.txt
           cat raw_diff.txt
 
