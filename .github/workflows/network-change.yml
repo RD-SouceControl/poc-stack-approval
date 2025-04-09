@@ -137,13 +137,13 @@ jobs:
       - name: Format and print CDK diff as Markdown table
         shell: bash
         run: |
-          set -eo pipefail
 
           echo "Step 1"
-          RAW_DIFF="${{ needs.detect-networking-changes.outputs.diff_content }}"
 
-          echo "[DEBUG] Raw diff content:"
-          echo "$RAW_DIFF" > raw_diff.txt
+          # RAW_DIFF="${{ needs.detect-networking-changes.outputs.diff_content }}"
+
+          # echo "[DEBUG] Raw diff content:"
+          echo "${{ needs.detect-networking-changes.outputs.diff_content }}" > raw_diff.txt
           cat raw_diff.txt
 
           echo "Step 2 - Generating summary table"
