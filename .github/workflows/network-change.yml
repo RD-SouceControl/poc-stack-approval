@@ -139,21 +139,7 @@ jobs:
         run: |
 
           echo "Step 1"
-          echo "${{ needs.detect-networking-changes.outputs.diff_content }}" > raw_diff.txt
-          cat raw_diff.txt
-
-          echo "Step 2 - Generating summary table"
-          echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
-
-          echo "$RAW_DIFF" | grep -E '^\[\+|\[-|\[~' | while read -r line; do
-            ACTION=$(echo "$line" | cut -c2)
-            DETAILS=$(echo "$line" | cut -c5-)
-            RESOURCE_TYPE=$(echo "$DETAILS" | awk '{print $1}')
-            LOGICAL_ID=$(echo "$DETAILS" | awk '{print $2}')
-            echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
-          done
+          echo "${{ needs.detect-networking-changes.outputs.diff_content }}"
 
 
 
