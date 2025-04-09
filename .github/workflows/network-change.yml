@@ -85,7 +85,7 @@ jobs:
       - name: Extract and format CDK diff
         shell: bash
         run: |
-          set -euo pipefail
+          set -eo pipefail  # Removed -u to avoid "unbound variable" errors
 
           echo "## CDK Networking Resource Changes Table" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -93,12 +93,11 @@ jobs:
           echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
 
           DIFF_CONTENT="${{ needs.detect-networking-changes.outputs.diff_content }}"
-          echo "[DEBUG] Starting to parse CDK diff output..."
           echo "[DEBUG] Raw diff content:"
           echo "$DIFF_CONTENT"
 
-          # Extract the "Resources" section
-          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ')
+          # Extract the resource lines
+          RESOURCE_LINES=$(echo "$DIFF_CONTENT" | awk '/^Resources$/,/^$/' | grep -E '^\[[+\-~]\] AWS::[A-Za-z0-9:]+ ' || true)
           echo "[DEBUG] Filtered resource lines:"
           echo "$RESOURCE_LINES"
 
@@ -109,7 +108,7 @@ jobs:
 
             # Count tokens
             TOKEN_COUNT=$(echo "$line" | awk '{print NF}')
-            if [[ "$TOKEN_COUNT" -lt 3 ]]; then
+            if [ "$TOKEN_COUNT" -lt 3 ]; then
               echo "[DEBUG] Skipping malformed or nested line: $line"
               continue
             fi
@@ -127,11 +126,11 @@ jobs:
 
             echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
             COUNT=$((COUNT + 1))
-
           done <<< "$RESOURCE_LINES"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
+
 
 
   # output-network-changes:
