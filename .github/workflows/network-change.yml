@@ -64,19 +64,6 @@ jobs:
             echo "requires_approval=true" >> "$GITHUB_OUTPUT"
           fi
 
-  output-network-changes:
-    needs: detect-networking-changes
-    if: needs.detect-networking-changes.outputs.requires_approval == 'true'
-    env:
-      DIFF_OUTPUT: ${{ needs.detect-networking-changes.outputs.diff_content }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Format and print CDK diff as Markdown table
-        shell: bash
-        run: |
-          echo "Step 1: Raw Diff Output"
-          echo "$DIFF_OUTPUT"
-
           echo "## CDK Networking Stack Changes" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
@@ -105,6 +92,48 @@ jobs:
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
+
+  # output-network-changes:
+  #   needs: detect-networking-changes
+  #   if: needs.detect-networking-changes.outputs.requires_approval == 'true'
+  #   env:
+  #     DIFF_OUTPUT: ${{ needs.detect-networking-changes.outputs.diff_content }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Format and print CDK diff as Markdown table
+  #       shell: bash
+  #       run: |
+  #         echo "Step 1: Raw Diff Output"
+  #         echo "$DIFF_OUTPUT"
+
+  #         echo "## CDK Networking Stack Changes" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "| Action | Resource Type | Logical ID |" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "|--------|---------------|------------|" >> "$GITHUB_STEP_SUMMARY"
+
+  #         # Filter only direct resource-level changes (ignore nested like └─ or │)
+  #         RESOURCE_LINES=$(echo "$DIFF_OUTPUT" | grep -E '^\[\+|\[-|\[~\]' | grep -vE '└|│')
+
+  #         COUNT=0
+
+  #         while IFS= read -r line; do
+  #           ACTION_CHAR=$(echo "$line" | cut -c2)
+  #           case "$ACTION_CHAR" in
+  #             "+") ACTION="Add" ;;
+  #             "-") ACTION="Destroy" ;;
+  #             "~") ACTION="Modify" ;;
+  #             *) ACTION="Unknown" ;;
+  #           esac
+
+  #           RESOURCE_TYPE=$(echo "$line" | awk '{print $2}')
+  #           LOGICAL_ID=$(echo "$line" | cut -d' ' -f3-)
+
+  #           echo "| $ACTION | $RESOURCE_TYPE | $LOGICAL_ID |" >> "$GITHUB_STEP_SUMMARY"
+  #           COUNT=$((COUNT + 1))
+  #         done <<< "$RESOURCE_LINES"
+
+  #         echo "" >> "$GITHUB_STEP_SUMMARY"
+  #         echo "**Total Resource Changes: $COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
       # - name: cdk diff networking
       #   id: detect
