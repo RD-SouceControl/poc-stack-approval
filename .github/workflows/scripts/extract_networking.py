@@ -53,7 +53,7 @@ def format_value(val):
         # Special handling for Tags
         if all(isinstance(item, dict) and "Key" in item and "Value" in item for item in val):
             tags = {tag["Key"]: tag["Value"] for tag in val}
-            return f"Tags: {tags}"
+            return f" {tags}"
         
         # Security Group Rule formatting
         if all(isinstance(item, dict) and "IpProtocol" in item for item in val):
