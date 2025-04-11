@@ -107,6 +107,13 @@ jobs:
         with:
           name: networking-summary
           path: networking_table.md
+  
+      - name: Append Networking Table to Job Summary
+        run: |
+          echo "### 🛰️ Detailed Networking Resource Table" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat networking_table.md >> "$GITHUB_STEP_SUMMARY"
+
 
   # output-network-changes:
   #   needs: detect-networking-changes
