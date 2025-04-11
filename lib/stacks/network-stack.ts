@@ -9,9 +9,8 @@ export class NetworkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Primary VPC with explicit CIDR
+    // Original VPC (unchanged)
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      cidr: '10.0.0.0/16',
       maxAzs: 2,
       natGateways: 0,
     });
@@ -20,13 +19,7 @@ export class NetworkStack extends cdk.Stack {
       value: this.vpc.vpcId,
     });
 
-    new cdk.CfnOutput(this, 'VpcCidr', {
-      value: this.vpc.vpcCidrBlock,
-    });
-
-    // Extra VPC with explicit CIDR
     const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
-      cidr: '10.1.0.0/16',
       maxAzs: 2,
       natGateways: 1,
       subnetConfiguration: [
@@ -43,7 +36,7 @@ export class NetworkStack extends cdk.Stack {
       ],
     });
 
-    // ALB in the public subnet
+    // // ALB in the public subnet
     const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
       vpc: extraVpc,
       internetFacing: true,
@@ -52,10 +45,6 @@ export class NetworkStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'ExtraVpcId', {
       value: extraVpc.vpcId,
-    });
-
-    new cdk.CfnOutput(this, 'ExtraVpcCidr', {
-      value: extraVpc.vpcCidrBlock,
     });
 
     new cdk.CfnOutput(this, 'ExtraALBDNS', {
