@@ -40,7 +40,7 @@ def format_value(val):
             if isinstance(index, str):
                 index = int(index)
             az_name = AZ_INDEX_MAPPING.get(index, f"AZ-{index}")
-            return f"AvailabilityZone: {az_name}"
+            return f" {az_name}"
         
         # Handle Ref
         if "Ref" in val:
