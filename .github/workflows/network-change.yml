@@ -110,7 +110,7 @@ jobs:
   
       - name: Append Networking Table to Job Summary
         run: |
-          echo "### 🛰️ Detailed Networking Resource Table" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Detailed Networking Resource Table" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           cat networking_table.md >> "$GITHUB_STEP_SUMMARY"
 

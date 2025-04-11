@@ -9,16 +9,18 @@ export class NetworkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Original VPC (unchanged)
+    // Main VPC
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 2,
       natGateways: 0,
     });
 
-    new cdk.CfnOutput(this, 'VpcId', {
-      value: this.vpc.vpcId,
-    });
+    cdk.Tags.of(this.vpc).add('Name', 'MainVpc');
+    cdk.Tags.of(this.vpc).add('Environment', 'Dev');
 
+    new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId });
+
+    // Additional VPC
     const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
       maxAzs: 2,
       natGateways: 1,
@@ -36,19 +38,32 @@ export class NetworkStack extends cdk.Stack {
       ],
     });
 
-    // // ALB in the public subnet
+    cdk.Tags.of(extraVpc).add('Name', 'ExtraVpc');
+    cdk.Tags.of(extraVpc).add('Environment', 'Dev');
+
+    // ALB in public subnet
     const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {
       vpc: extraVpc,
       internetFacing: true,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
 
-    new cdk.CfnOutput(this, 'ExtraVpcId', {
-      value: extraVpc.vpcId,
+    cdk.Tags.of(alb).add('Name', 'ExtraALB');
+
+    // Security Group
+    const albSg = new ec2.SecurityGroup(this, 'ExtraALBSecurityGroup', {
+      vpc: extraVpc,
+      description: 'Security group for ALB',
+      allowAllOutbound: true,
     });
 
-    new cdk.CfnOutput(this, 'ExtraALBDNS', {
-      value: alb.loadBalancerDnsName,
-    });
+    albSg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Allow HTTP');
+    albSg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), 'Allow HTTPS');
+    albSg.addEgressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), 'Allow all egress');
+
+    cdk.Tags.of(albSg).add('Name', 'ExtraALBSG');
+
+    new cdk.CfnOutput(this, 'ExtraVpcId', { value: extraVpc.vpcId });
+    new cdk.CfnOutput(this, 'ExtraALBDNS', { value: alb.loadBalancerDnsName });
   }
 }
