@@ -1,28 +1,42 @@
 import yaml
 
+# Static AZ index mapping (can customize per region if needed)
+AZ_INDEX_MAPPING = {
+    0: "us-east-1a",
+    1: "us-east-1b",
+    2: "us-east-1c",
+    3: "us-east-1d",
+    4: "us-east-1e",
+    5: "us-east-1f"
+}
+
 def format_value(val):
     if isinstance(val, dict):
-        # Handle Fn::Select with Fn::GetAZs
+        # Handle Fn::Select -> Fn::GetAZs
         if "Fn::Select" in val:
             select_val = val["Fn::Select"]
             index = select_val[0]
-            get_azs = select_val[1]
-            if isinstance(get_azs, dict) and "Fn::GetAZs" in get_azs:
-                return f"Auto-resolved (AZ Index {index})"
+            if isinstance(index, str):
+                index = int(index)
+            az_name = AZ_INDEX_MAPPING.get(index, f"AZ-{index}")
+            return f"AvailabilityZone: {az_name}"
         
         # Handle Ref
         if "Ref" in val:
             return f"Ref: {val['Ref']}"
         
-        # Handle other intrinsics or nested objects
+        # Other nested structures
         return ", ".join(f"{k}: {format_value(v)}" for k, v in val.items())
     
     elif isinstance(val, list):
+        # Special handling for Tags
+        if all(isinstance(item, dict) and "Key" in item and "Value" in item for item in val):
+            tags = {tag["Key"]: tag["Value"] for tag in val}
+            return f"Tags: {tags}"
         return f"{len(val)} items"
     
     return str(val)
 
-# Read and parse the CDK synthesized CloudFormation template
 with open("template.yaml", "r") as f:
     content = f.read()
     print(":mag: Raw template.yaml content:\n")
@@ -37,7 +51,6 @@ if not isinstance(template, dict):
 
 resources = template.get("Resources", {})
 
-# Write the markdown table summarizing networking-related resources
 with open("networking_table.md", "w") as out:
     out.write("| Logical ID | Resource Type | Key Properties |\n")
     out.write("|------------|----------------|----------------|\n")
