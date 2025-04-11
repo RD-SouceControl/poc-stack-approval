@@ -98,6 +98,7 @@ with open("networking_table.md", "w") as out:
             key_props = []
             for k, v in props.items():
                 val_str = format_value(v)
-                key_props.append(f"{k}: `{val_str}`")
-            prop_str = ", ".join(key_props)
+                key_props.append(f"{k}: {val_str}")
+            # Use bullet points and line breaks for better Markdown formatting
+            prop_str = "<br>".join(f"• `{p}`" for p in key_props)
             out.write(f"| {logical_id} | {r_type} | {prop_str} |\n")
