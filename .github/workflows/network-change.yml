@@ -100,7 +100,7 @@ jobs:
       - name: Generate Networking Table
         run: |
           pip install pyyaml
-          python .github/scripts/extract_networking.py
+          python .github/workflows/scripts/extract_networking.py
 
       - name: Upload Markdown Table Artifact
         uses: actions/upload-artifact@v4
