@@ -97,16 +97,6 @@ jobs:
         run: |
           cdk synth NetworkStack --quite > template.yaml
 
-      # - name: Install AWS CLI
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y unzip curl
-      #     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-      #     unzip awscliv2.zip
-      #     sudo ./aws/install
-      #     aws --version
-
       - name: Fetch Deployed CloudFormation Template
         run: |
           aws cloudformation get-template \
@@ -119,10 +109,10 @@ jobs:
            pip install pyyaml
            python .github/workflows/scripts/networking_diff_cidr_check.py
 
-      # - name: Generate Networking Table
-      #   run: |
-      #     pip install pyyaml
-      #     python .github/workflows/scripts/extract_networking.py
+      - name: Generate Networking Table
+        run: |
+          pip install pyyaml
+          python .github/workflows/scripts/extract_networking.py
 
       - name: Upload Markdown Table Artifact
         uses: actions/upload-artifact@v4
