@@ -114,7 +114,7 @@ with open("networking_table.md", "w") as out:
             out.write("- No overlaps detected\n")
 
     out.write("\n## Networking Resource Comparison\n")
-    out.write("| Logical ID | Resource Type | Key Properties (Synth) | Deployed Properties |\n")
+    out.write("| Logical ID | Resource Type | Current State | Future State |\n")
     out.write("|------------|----------------|-------------------------|----------------------|\n")
 
     networking_types = {
