@@ -116,7 +116,8 @@ jobs:
 
       - name: Run networking diff and CIDR check
         run: |
-          python3 scripts/networking_diff_with_cidr_check.py
+           pip install pyyaml
+           python .github/workflows/scripts/networking_diff_with_cidr_check.py
 
       # - name: Generate Networking Table
       #   run: |
