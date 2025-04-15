@@ -33,53 +33,51 @@ def format_security_rule(rule):
 
 def format_value(val):
     if isinstance(val, dict):
-        # Handle Fn::Select -> Fn::GetAZs
         if "Fn::Select" in val:
             select_val = val["Fn::Select"]
             index = select_val[0]
             if isinstance(index, str):
                 index = int(index)
             az_name = AZ_INDEX_MAPPING.get(index, f"AZ-{index}")
-            return f" {az_name}"
-        
-        # Handle Ref
+            return f"AvailabilityZone: {az_name}"
         if "Ref" in val:
             return f"Ref: {val['Ref']}"
-        
-        # Fallback for other nested structures
         return ", ".join(f"{k}: {format_value(v)}" for k, v in val.items())
     
     elif isinstance(val, list):
-        # Special handling for Tags
         if all(isinstance(item, dict) and "Key" in item and "Value" in item for item in val):
             tags = {tag["Key"]: tag["Value"] for tag in val}
-            return f" {tags}"
-        
-        # Security Group Rule formatting
+            return f"Tags: {tags}"
         if all(isinstance(item, dict) and "IpProtocol" in item for item in val):
             return "[" + "; ".join(format_security_rule(rule) for rule in val) + "]"
-        
         return f"{len(val)} items"
 
     return str(val)
 
-with open("template.yaml", "r") as f:
-    content = f.read()
-    print(":mag: Raw template.yaml content:\n")
-    print(content)
-    print("\n--- End of template.yaml preview ---\n")
-    if not content.strip():
-        raise ValueError("template.yaml is empty.")
-    template = yaml.safe_load(content)
+def extract_template(file_path):
+    with open(file_path, "r") as f:
+        content = f.read()
+        if not content.strip():
+            raise ValueError(f"{file_path} is empty.")
+        return yaml.safe_load(content)
 
-if not isinstance(template, dict):
-    raise ValueError("Parsed template is not a valid dictionary.")
+def extract_key_props(resource):
+    props = resource.get("Properties", {})
+    formatted = []
+    for k, v in props.items():
+        formatted.append(f"{k}: {format_value(v)}")
+    return formatted
 
-resources = template.get("Resources", {})
+# Load both templates
+synth_template = extract_template("template.yaml")
+deployed_template = extract_template("deployed-template.yaml")
+
+synth_resources = synth_template.get("Resources", {})
+deployed_resources = deployed_template.get("Resources", {})
 
 with open("networking_table.md", "w") as out:
-    out.write("| Logical ID | Resource Type | Key Properties |\n")
-    out.write("|------------|----------------|----------------|\n")
+    out.write("| Logical ID | Resource Type | Key Properties (Synth) | Deployed Properties |\n")
+    out.write("|------------|----------------|-------------------------|----------------------|\n")
 
     networking_types = {
         "AWS::EC2::VPC",
@@ -91,14 +89,20 @@ with open("networking_table.md", "w") as out:
         "AWS::EC2::SecurityGroup"
     }
 
-    for logical_id, resource in resources.items():
+    for logical_id, resource in synth_resources.items():
         r_type = resource.get("Type")
         if r_type in networking_types:
-            props = resource.get("Properties", {})
-            key_props = []
-            for k, v in props.items():
-                val_str = format_value(v)
-                key_props.append(f"{k}: {val_str}")
-            # Use bullet points and line breaks for better Markdown formatting
-            prop_str = "<br>".join(f"• `{p}`" for p in key_props)
-            out.write(f"| {logical_id} | {r_type} | {prop_str} |\n")
+            synth_props = extract_key_props(resource)
+            deployed_props = []
+
+            deployed_resource = deployed_resources.get(logical_id)
+            if deployed_resource:
+                deployed_props = extract_key_props(deployed_resource)
+            else:
+                deployed_props = ["(Not Found)"]
+
+            # Markdown-friendly bullet lists with <br>
+            synth_str = "<br>".join(f"• `{p}`" for p in synth_props)
+            deployed_str = "<br>".join(f"• `{p}`" for p in deployed_props)
+
+            out.write(f"| {logical_id} | {r_type} | {synth_str} | {deployed_str} |\n")
