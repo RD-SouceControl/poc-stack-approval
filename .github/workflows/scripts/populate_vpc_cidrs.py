@@ -19,9 +19,9 @@ def populate_dynamodb(vpcs):
     for vpc in vpcs:
         try:
             table.put_item(Item=vpc)
-            print(f"✅ Added {vpc['VpcId']} with CIDR {vpc['CidrBlock']}")
+            print(f" Added {vpc['VpcId']} with CIDR {vpc['CidrBlock']}")
         except Exception as e:
-            print(f"❌ Failed to add {vpc['VpcId']}: {e}")
+            print(f" Failed to add {vpc['VpcId']}: {e}")
 
 if __name__ == "__main__":
     existing_vpcs = list(get_all_vpcs())
