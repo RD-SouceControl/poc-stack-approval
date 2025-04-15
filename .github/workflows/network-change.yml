@@ -112,6 +112,11 @@ jobs:
       - name: Run networking CIDR check
         run: |
            pip install pyyaml
+           python .github/workflows/scripts/populate_vpc_cidrs.py
+
+      - name: Run networking CIDR check
+        run: |
+           pip install pyyaml
            python .github/workflows/scripts/networking_diff_cidr_check.py
 
       - name: Upload Markdown Table Artifact
