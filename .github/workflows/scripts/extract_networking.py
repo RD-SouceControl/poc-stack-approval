@@ -1,6 +1,5 @@
 import yaml
 
-# Static AZ index mapping (customize per region if needed)
 AZ_INDEX_MAPPING = {
     0: "us-east-1a",
     1: "us-east-1b",
@@ -34,12 +33,11 @@ def format_security_rule(rule):
 def format_value(val):
     if isinstance(val, dict):
         if "Fn::Select" in val:
-            select_val = val["Fn::Select"]
-            index = select_val[0]
+            index = val["Fn::Select"][0]
             if isinstance(index, str):
                 index = int(index)
-            az_name = AZ_INDEX_MAPPING.get(index, f"AZ-{index}")
-            return f"AvailabilityZone: {az_name}"
+            az = AZ_INDEX_MAPPING.get(index, f"AZ-{index}")
+            return f"AvailabilityZone: {az}"
         if "Ref" in val:
             return f"Ref: {val['Ref']}"
         return ", ".join(f"{k}: {format_value(v)}" for k, v in val.items())
@@ -63,12 +61,8 @@ def extract_template(file_path):
 
 def extract_key_props(resource):
     props = resource.get("Properties", {})
-    formatted = []
-    for k, v in props.items():
-        formatted.append(f"{k}: {format_value(v)}")
-    return formatted
+    return {k: format_value(v) for k, v in props.items()}
 
-# Load both templates
 synth_template = extract_template("template.yaml")
 deployed_template = extract_template("deployed-template.yaml")
 
@@ -91,18 +85,34 @@ with open("networking_table.md", "w") as out:
 
     for logical_id, resource in synth_resources.items():
         r_type = resource.get("Type")
-        if r_type in networking_types:
-            synth_props = extract_key_props(resource)
-            deployed_props = []
+        if r_type not in networking_types:
+            continue
 
-            deployed_resource = deployed_resources.get(logical_id)
-            if deployed_resource:
-                deployed_props = extract_key_props(deployed_resource)
-            else:
-                deployed_props = ["(Not Found)"]
+        synth_props = extract_key_props(resource)
+        deployed_props = extract_key_props(deployed_resources.get(logical_id, {})) if logical_id in deployed_resources else {}
 
-            # Markdown-friendly bullet lists with <br>
-            synth_str = "<br>".join(f"• `{p}`" for p in synth_props)
-            deployed_str = "<br>".join(f"• `{p}`" for p in deployed_props)
+        synth_lines = []
+        deployed_lines = []
 
-            out.write(f"| {logical_id} | {r_type} | {synth_str} | {deployed_str} |\n")
+        all_keys = set(synth_props.keys()).union(set(deployed_props.keys()))
+
+        for key in sorted(all_keys):
+            synth_val = synth_props.get(key, "(Missing)")
+            deployed_val = deployed_props.get(key, "(Missing)")
+
+            is_changed = synth_val != deployed_val
+
+            synth_line = f"{key}: `{synth_val}`"
+            deployed_line = f"{key}: `{deployed_val}`"
+
+            if is_changed:
+                synth_line = f"**{synth_line}** :warning: Changed"
+                deployed_line = f"**{deployed_line}**"
+
+            synth_lines.append(f"• {synth_line}")
+            deployed_lines.append(f"• {deployed_line}")
+
+        synth_str = "<br>".join(synth_lines)
+        deployed_str = "<br>".join(deployed_lines)
+
+        out.write(f"| {logical_id} | {r_type} | {synth_str} | {deployed_str} |\n")
