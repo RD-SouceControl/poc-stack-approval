@@ -127,10 +127,10 @@ jobs:
       #     pip install pyyaml
       #     python .github/workflows/scripts/extract_networking.py
 
-      # - name: Run networking CIDR check
-      #   run: |
-      #      pip install pyyaml
-      #      python .github/workflows/scripts/populate_vpc_cidrs.py
+      - name: Run networking CIDR check
+        run: |
+           pip install pyyaml
+           python .github/workflows/scripts/populate_vpc_cidrs.py
 
       - name: Run networking CIDR check
         run: |
