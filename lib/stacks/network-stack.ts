@@ -11,19 +11,17 @@ export class NetworkStack extends cdk.Stack {
 
     // Main VPC
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      cidr: '10.3.0.0/16',
       maxAzs: 2,
       natGateways: 0,
     });
 
-    cdk.Tags.of(this.vpc).add('Name', 'MainVpc-1');
-    cdk.Tags.of(this.vpc).add('Environment', 'Test');
+    cdk.Tags.of(this.vpc).add('Name', 'MainVpc');
+    cdk.Tags.of(this.vpc).add('Environment', 'test');
 
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId });
 
     // Additional VPC
     const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
-      cidr: '10.4.0.0/16',
       maxAzs: 2,
       natGateways: 1,
       subnetConfiguration: [
@@ -40,8 +38,8 @@ export class NetworkStack extends cdk.Stack {
       ],
     });
 
-    cdk.Tags.of(extraVpc).add('Name', 'ExtraVpc-2');
-    cdk.Tags.of(extraVpc).add('Environment', 'Test');
+    cdk.Tags.of(extraVpc).add('Name', 'ExtraVpc');
+    cdk.Tags.of(extraVpc).add('Environment', 'test');
 
     // ALB in public subnet
     const alb = new elbv2.ApplicationLoadBalancer(this, 'ExtraALB', {

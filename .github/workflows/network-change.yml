@@ -112,7 +112,7 @@ jobs:
           aws cloudformation get-template \
             --stack-name NetworkStack \
             --query "TemplateBody" \
-            --output text > deployed-template.yaml          
+            --output json > deployed-template.yaml
 
       - name: Generate Networking Table
         run: |
