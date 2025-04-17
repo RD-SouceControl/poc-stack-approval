@@ -13,12 +13,12 @@ AZ_INDEX_MAPPING = {
 
 dynamodb_table_name = "VpcCidrRegistry"
 
-def fetch_registered_cidrs():
+def fetch_registered_vpcs():
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(dynamodb_table_name)
     try:
         response = table.scan()
-        return [item["CidrBlock"] for item in response.get("Items", [])]
+        return response.get("Items", [])
     except Exception as e:
         print(f"Failed to read DynamoDB table: {e}")
         return []
@@ -97,22 +97,40 @@ deployed_template = extract_template("deployed-template.yaml")
 synth_resources = synth_template.get("Resources", {})
 deployed_resources = deployed_template.get("Resources", {})
 
-# Start writing the file
 with open("networking_table.md", "w") as out:
     out.write("## :warning: CIDR Overlap Check\n")
 
-    cidrs_from_dynamo = fetch_registered_cidrs()
-    if not cidrs_from_dynamo:
+    vpcs_from_dynamo = fetch_registered_vpcs()
+    if not vpcs_from_dynamo:
         out.write("- No entries found in DynamoDB. CIDR overlap check skipped.\n")
     else:
         cidr_warnings = []
+
         for logical_id, resource in synth_resources.items():
-            if resource["Type"] == "AWS::EC2::VPC":
-                cidr = resource.get("Properties", {}).get("CidrBlock")
-                if cidr:
-                    overlaps = [existing for existing in cidrs_from_dynamo if cidrs_overlap(cidr, existing)]
-                    if overlaps:
-                        cidr_warnings.append(f"CIDR `{cidr}` for `{logical_id}` overlaps with `{', '.join(overlaps)}`")
+            if resource.get("Type") != "AWS::EC2::VPC":
+                continue
+
+            cidr = resource.get("Properties", {}).get("CidrBlock")
+            if not cidr:
+                continue
+
+            deployed_cidr = deployed_resources.get(logical_id, {}).get("Properties", {}).get("CidrBlock")
+
+            is_new_or_modified = deployed_cidr != cidr
+            if not is_new_or_modified:
+                continue  # Skip if there's no change to this VPC
+
+            synth_vpc_name = get_resource_name(resource, logical_id)
+            for vpc_entry in vpcs_from_dynamo:
+                existing_cidr = vpc_entry.get("CidrBlock")
+                existing_vpc_name = vpc_entry.get("VpcName", "Unknown")
+                existing_vpc_id = vpc_entry.get("VpcId", "Unknown")
+
+                if cidrs_overlap(cidr, existing_cidr):
+                    cidr_warnings.append(
+                        f"CIDR `{cidr}` for `{synth_vpc_name}` (Logical ID: `{logical_id}`) "
+                        f"overlaps with `{existing_cidr}` used by `{existing_vpc_name}` (VPC ID: `{existing_vpc_id}`)"
+                    )
 
         if cidr_warnings:
             for warning in cidr_warnings:
