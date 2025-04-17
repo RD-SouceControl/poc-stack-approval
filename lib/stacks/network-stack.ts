@@ -11,11 +11,11 @@ export class NetworkStack extends cdk.Stack {
 
     // Main VPC
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      cidr: '10.2.0.0/16',
+      cidr: '10.1.0.0/16',
       maxAzs: 2,
       natGateways: 0,
     });
-    
+
     cdk.Tags.of(this.vpc).add('Environment', 'Test');
 
     new cdk.CfnOutput(this, 'VpcId', { value: this.vpc.vpcId });
