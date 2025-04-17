@@ -68,6 +68,12 @@ jobs:
         run: |
           cdk synth NetworkStack --quite > template.yaml
 
+      - name: Upload Future State (template.yaml)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Future State
+          path: template.yaml
+
       - name: Fetch Deployed CloudFormation Template
         run: |
           aws cloudformation get-template \
@@ -75,10 +81,16 @@ jobs:
             --query "TemplateBody" \
             --output json > deployed-template.yaml
 
-      # - name: Run networking CIDR check
-      #   run: |
-      #      pip install pyyaml
-      #      python .github/workflows/scripts/populate_vpc_cidrs.py
+      - name: Upload Current State (deployed-template.yaml)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Current State
+          path: deployed-template.yaml
+
+      - name: Run networking CIDR check
+        run: |
+           pip install pyyaml
+           python .github/workflows/scripts/populate_vpc_cidrs.py
 
       - name: Run networking CIDR check
         run: |
