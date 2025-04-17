@@ -87,10 +87,10 @@ jobs:
           name: Current State
           path: deployed-template.yaml
 
-      - name: Run networking CIDR check
-        run: |
-           pip install pyyaml
-           python .github/workflows/scripts/populate_vpc_cidrs.py
+      # - name: Run networking CIDR check
+      #   run: |
+      #      pip install pyyaml
+      #      python .github/workflows/scripts/populate_vpc_cidrs.py
 
       - name: Run networking CIDR check
         run: |
