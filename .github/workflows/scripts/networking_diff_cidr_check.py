@@ -84,6 +84,13 @@ def extract_key_props(resource):
     props = resource.get("Properties", {})
     return {k: format_value(v) for k, v in props.items()}
 
+def get_resource_name(resource, logical_id):
+    tags = resource.get("Properties", {}).get("Tags", [])
+    for tag in tags:
+        if tag.get("Key") == "Name":
+            return tag.get("Value", logical_id)
+    return logical_id
+
 synth_template = extract_template("template.yaml")
 deployed_template = extract_template("deployed-template.yaml")
 
@@ -158,5 +165,6 @@ with open("networking_table.md", "w") as out:
 
         synth_str = "<br>".join(synth_lines)
         deployed_str = "<br>".join(deployed_lines)
+        display_name = get_resource_name(resource, logical_id)
 
-        out.write(f"| {logical_id} | {r_type} | {synth_str} | {deployed_str} |\n")
+        out.write(f"| {display_name} | {r_type} | {synth_str} | {deployed_str} |\n")
