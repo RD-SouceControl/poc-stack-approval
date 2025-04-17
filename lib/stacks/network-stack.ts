@@ -11,7 +11,7 @@ export class NetworkStack extends cdk.Stack {
 
     // Main VPC
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      cidr: '10.0.0.0/16',
+      cidr: '10.1.0.0/16',
       maxAzs: 2,
       natGateways: 0,
     });
@@ -23,7 +23,7 @@ export class NetworkStack extends cdk.Stack {
 
     // Additional VPC
     const extraVpc = new ec2.Vpc(this, 'ExtraVpc', {
-      cidr: '10.3.0.0/16',
+      cidr: '10.2.0.0/16',
       maxAzs: 2,
       natGateways: 0,
       subnetConfiguration: [
